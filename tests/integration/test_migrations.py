@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from alembic.config import Config
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from alembic import command
 from app.db import create_db_engine
@@ -31,6 +31,8 @@ def test_initial_migration_can_upgrade_and_downgrade_an_empty_database(tmp_path:
 
     engine = create_db_engine(config.get_main_option("sqlalchemy.url"))
     assert EXPECTED_TABLES.issubset(inspect(engine).get_table_names())
+    lead_columns = {column["name"] for column in inspect(engine).get_columns("leads")}
+    assert "normalized_city" in lead_columns
     engine.dispose()
 
     command.downgrade(config, "base")
@@ -39,3 +41,36 @@ def test_initial_migration_can_upgrade_and_downgrade_an_empty_database(tmp_path:
     engine.dispose()
 
     assert not (EXPECTED_TABLES - {"alembic_version"}) & tables
+
+
+def test_normalized_city_migration_preserves_existing_leads(tmp_path: Path) -> None:
+    database_path = tmp_path / "legacy.db"
+    config = migration_config(database_path)
+    command.upgrade(config, "0001_initial_schema")
+
+    engine = create_db_engine(config.get_main_option("sqlalchemy.url"))
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO leads (
+                    id, name, business_type, source, source_url, score_band, review_status
+                ) VALUES (
+                    'legacy-lead', 'Legacy Bike Studio', 'BIKE_WORKSHOP', 'web',
+                    'https://example.test/legacy', 'D', 'NEW'
+                )
+                """
+            )
+        )
+    engine.dispose()
+
+    command.upgrade(config, "head")
+    engine = create_db_engine(config.get_main_option("sqlalchemy.url"))
+    with engine.connect() as connection:
+        stored_lead = connection.execute(
+            text("SELECT name, normalized_city FROM leads WHERE id = 'legacy-lead'")
+        ).one()
+    engine.dispose()
+
+    assert stored_lead.name == "Legacy Bike Studio"
+    assert stored_lead.normalized_city is None

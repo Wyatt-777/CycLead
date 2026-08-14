@@ -49,6 +49,12 @@ class CandidateProcessingStatus(StrEnum):
     ERROR = "ERROR"
 
 
+class DeduplicationStatus(StrEnum):
+    NEW = "NEW"
+    DUPLICATE = "DUPLICATE"
+    POSSIBLE_DUPLICATE = "POSSIBLE_DUPLICATE"
+
+
 class EvidenceType(StrEnum):
     SERVICE_CLAIM = "SERVICE_CLAIM"
     PRODUCT_CLAIM = "PRODUCT_CLAIM"

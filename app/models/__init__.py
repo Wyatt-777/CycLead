@@ -4,6 +4,7 @@ from app.models.core import DiscoveryRun, Evidence, Lead, Query, RawCandidate, R
 from app.models.enums import (
     BusinessType,
     CandidateProcessingStatus,
+    DeduplicationStatus,
     DiscoveryRunStatus,
     EvidenceType,
     ReviewDecision,
@@ -16,6 +17,7 @@ __all__ = [
     "CandidateProcessingStatus",
     "DiscoveryRun",
     "DiscoveryRunStatus",
+    "DeduplicationStatus",
     "Evidence",
     "EvidenceType",
     "Lead",

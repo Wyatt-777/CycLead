@@ -102,7 +102,7 @@ queries
 为满足可追溯、去重和运行审计要求，Phase 1 的 SQLite 实现补充以下内部字段和表：
 
 - `raw_candidates`：保存 `discovery_run_id`、原始 URL、标题、描述、联系人文本、抓取时间、处理状态和单条错误；它是解析问题的定位依据。
-- `leads`：除业务展示字段外，保存 `canonical_url`、平台/平台账号、归一化邮箱、电话和名称。`canonical_url` 可空但在存在时唯一。
+- `leads`：除业务展示字段外，保存 `canonical_url`、平台/平台账号、归一化邮箱、电话、名称和城市。`canonical_url` 可空但在存在时唯一。
 - `discovery_runs`：额外保存 `rejected_count`，以支持 M12 的完整运行报告。
 - `queries`：保存查询、来源、地区和是否启用，供 Seed Manager 复用。
 

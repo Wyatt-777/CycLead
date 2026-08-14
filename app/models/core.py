@@ -141,6 +141,7 @@ class Lead(TimestampedRecord, Base):
     normalized_email: Mapped[str | None] = mapped_column(String(320))
     normalized_phone: Mapped[str | None] = mapped_column(String(64))
     normalized_name: Mapped[str | None] = mapped_column(String(500))
+    normalized_city: Mapped[str | None] = mapped_column(String(128))
     score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     score_band: Mapped[ScoreBand] = mapped_column(
         enum_column(ScoreBand), default=ScoreBand.D, nullable=False
