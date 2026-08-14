@@ -20,7 +20,7 @@ MVP 的交付物是“推荐联系名单”，不是自动联系行为。
 
 ### 1.2 当前实现状态
 
-当前仓库已建立 Phase 0 基础工程：Python 包、依赖清单、最小 FastAPI 健康检查、版本 CLI、测试框架、配置模板和 golden dataset 标注合同。数据库、来源适配器、解析、去重、评分、Evidence、审核、导出和真实人工标注的 golden dataset 尚未实现。本文档其余内容描述待实施的目标状态，不表示这些组件已经存在。
+当前仓库已完成 Phase 1 持久化基础：Python 包、依赖清单、最小 FastAPI 健康检查、版本 CLI、Pydantic 输入契约、SQLite ORM 模型、Alembic 首次迁移、测试框架、配置模板和 golden dataset 标注合同。来源适配器、解析、归一化、去重、分类、评分、Evidence 生成、审核服务、导出和真实人工标注的 golden dataset 尚未实现。本文档其余内容描述待实施的目标状态，不表示这些组件已经存在。
 
 ## 2. 需求基线与实施决定
 

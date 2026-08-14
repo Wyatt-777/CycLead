@@ -48,6 +48,12 @@ pytest
 ruff check .
 ```
 
+初始化本地数据库时，使用版本化迁移：
+
+```powershell
+.\.venv\Scripts\alembic.exe upgrade head
+```
+
 当前基础工程只提供版本命令和健康检查：
 
 ```powershell

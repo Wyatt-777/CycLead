@@ -1,5 +1,5 @@
-from pytest import raises
 from pydantic import ValidationError
+from pytest import raises
 
 from app.config import Settings
 
