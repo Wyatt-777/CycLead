@@ -40,7 +40,7 @@ Codex 应根据其中说明读取 `docs/`。
 项目运行时要求 **Python 3.12+**。在具备该版本解释器后，可按以下方式建立本地环境：
 
 ```powershell
-python -m venv .venv
+python3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
