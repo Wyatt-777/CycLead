@@ -13,6 +13,7 @@ def test_parser_uses_captured_title_only_when_manual_name_is_missing() -> None:
             snippet="Custom bike builds",
             captured_at=datetime.now(timezone.utc),
             city="Singapore",
+            raw_contact_text="Public email: sales@example.test",
             services=["custom bike build"],
         )
     )
@@ -20,4 +21,5 @@ def test_parser_uses_captured_title_only_when_manual_name_is_missing() -> None:
     assert parsed.name == "Example Bike Studio"
     assert parsed.description == "Custom bike builds"
     assert parsed.email is None
+    assert parsed.raw_contact_text == "Public email: sales@example.test"
     assert parsed.services == ("custom bike build",)

@@ -208,6 +208,72 @@ UNKNOWN
 }
 ```
 
+## M06-M08 Phase 1 v1 implementation contract
+
+The following rules make the initial M06-M08 specification deterministic. They do not
+change the category caps or score bands defined above.
+
+### Evidence boundary
+
+- A classifier conclusion and every non-zero scoring reason must retain the original
+  source URL, the original source text (or the supplied website/social URL itself),
+  the candidate capture time, an Evidence type, and confidence.
+- A structured email or phone earns contact points only when that exact value appears
+  in the source snippet/description or `raw_contact_text`. Missing or unmatched values
+  remain stored as supplied but earn no contact score.
+- A supplied `/contact` website URL may support the contact-page rule. A supplied
+  social URL may support the social rule only after explicit source text classifies the
+  candidate as a commercial bicycle business.
+- If source text is absent or ambiguous, the classifier returns `UNKNOWN`; it does not
+  infer a business type from a name, URL host, city, or contact field.
+- `UNRELATED` is used only for an explicit unrelated-business term with no bicycle
+  context. Otherwise insufficient evidence remains `UNKNOWN`.
+
+### Classifier precedence
+
+The classifier uses explicit source text, case-insensitively. It recognizes bicycle
+context from `bike`, `bicycle`, `自行车`, or `单车`; related Chinese terms included in
+the rule list are matched literally. Precedence is:
+
+1. An unrelated business term without bicycle context: `UNRELATED`.
+2. A creator signal (`creator`, `influencer`, `youtube`, `channel`, `博主`, `创作者`)
+   plus bicycle context and an explicit commercial service: `CONTENT_CREATOR_COMMERCIAL`.
+3. An explicit bicycle business phrase: `BIKE_BUILDER`, `BIKE_DISTRIBUTOR`,
+   `BIKE_BRAND`, `BIKE_WORKSHOP`, `BIKE_REPAIR`, or `BIKE_SHOP`.
+4. A creator signal with bicycle context but no commercial service: `CONTENT_CREATOR_ONLY`.
+5. All other cases: `UNKNOWN`.
+
+The explicit English bicycle business phrases are `frame builder`, `bike builder`,
+`bike distributor`, `bicycle distributor`, `bicycle wholesale`, `bike brand`,
+`bicycle brand`, `bike manufacturer`, `bicycle manufacturer`, `bike workshop`,
+`bicycle workshop`, `custom bike build`, `custom bicycle build`, `bike fitting`,
+`bike repair`, `bicycle repair`, `bike maintenance`, `bicycle maintenance`,
+`bike shop`, `bicycle shop`, `bike store`, and `bicycle store`.
+
+### Deterministic scoring
+
+| Category | Rule | Points | Cap | Evaluation order |
+| --- | --- | ---: | ---: | --- |
+| Commercial intent | Explicit `custom bike build`, `custom bicycle build`, `bike assembly`, `bicycle assembly`, or `自行车组装` | 20 | 30 | first |
+| Commercial intent | Explicit bicycle repair or upgrade phrase | 15 | 30 | second |
+| Commercial intent | Explicit bicycle shop, store, or workshop phrase | 15 | 30 | third |
+| Product relevance | Each distinct term among `groupset`, `wheelset`, `derailleur`, `crank`, `brake`, `power meter`, `bicycle components` | 5 each | 25 | listed order |
+| Contactability | Public email found in original source text | 8 | 20 | first |
+| Contactability | Public phone found in original source text | 8 | 20 | second |
+| Contactability | Supplied website URL has an explicit contact path | 5 | 20 | third |
+| Contactability | Supplied public social URL for an explicitly commercial business | 5 | 20 | fourth |
+| Activity | Dated recent-activity claim | 0 in Manual Seed v1 | 10 | not yet implemented |
+| Purchase potential | `BIKE_WORKSHOP` or `BIKE_BUILDER` | 15 | 15 | one business-type rule |
+| Purchase potential | `BIKE_SHOP`, `BIKE_REPAIR`, or `BIKE_DISTRIBUTOR` | 12 | 15 | one business-type rule |
+| Purchase potential | `BIKE_BRAND` | 8 | 15 | one business-type rule |
+| Purchase potential | `CONTENT_CREATOR_COMMERCIAL` | 5 | 15 | one business-type rule |
+
+Each capped category is evaluated in the table's stated order. If a rule would exceed
+the remaining category cap, it receives only the remaining points and the stored
+reason records that actual point value. `CONTENT_CREATOR_ONLY`, `UNRELATED`, and
+`UNKNOWN` receive zero purchase-potential points. Each term contributes at most once.
+The total remains in the 0-100 range and uses the existing A-D bands.
+
 ---
 
 # M09 — Qualification Engine

@@ -22,6 +22,7 @@ class ParsedCandidate:
     social_url: str | None
     email: str | None
     phone: str | None
+    raw_contact_text: str | None
     services: tuple[str, ...]
     source: str
     source_url: str
@@ -48,9 +49,10 @@ class CandidateParser:
             social_url=raw_candidate.social_url,
             email=raw_candidate.email,
             phone=raw_candidate.phone,
+            raw_contact_text=raw_candidate.raw_contact_text,
             services=tuple(raw_candidate.services),
             source=raw_candidate.source,
             source_url=raw_candidate.url,
-            source_text=raw_candidate.snippet,
+            source_text=raw_candidate.description or raw_candidate.snippet,
             captured_at=raw_candidate.captured_at,
         )

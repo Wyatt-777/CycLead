@@ -4,7 +4,15 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import DiscoveryRun, DiscoveryRunStatus, Lead, Query, RawCandidate
+from app.models import (
+    DiscoveryRun,
+    DiscoveryRunStatus,
+    Evidence,
+    Lead,
+    Query,
+    RawCandidate,
+    ScoreBand,
+)
 from app.schemas import SeedInput
 from app.services.discovery import DiscoveryService
 from app.sources import ManualSeedSource
@@ -96,3 +104,45 @@ def test_manual_discovery_records_unreadable_file_as_failed_run(
 
     assert summary.status is DiscoveryRunStatus.FAILED
     assert summary.errors == 1
+
+
+def test_manual_discovery_scores_a_source_backed_lead_and_persists_evidence(
+    db_session: Session, tmp_path: Path
+) -> None:
+    seed_file = write_seed_file(
+        tmp_path / "scored-seeds.json",
+        [
+            {
+                "url": "https://directory.example.test/example-bike-studio",
+                "title": "Example Bike Studio",
+                "snippet": (
+                    "Custom bike build at our bike workshop. We offer bike repair and bike "
+                    "upgrade using groupset, wheelset, derailleur, crank, brake, power meter, "
+                    "and bicycle components."
+                ),
+                "country": "SG",
+                "city": "Singapore",
+                "website": "https://example.test/contact",
+                "social_url": "https://social.example.test/example-bike-studio",
+                "email": "sales@example.test",
+                "phone": "+65 6123 4567",
+                "raw_contact_text": "Email: sales@example.test; Phone: +65 6123 4567",
+            }
+        ],
+    )
+
+    summary = DiscoveryService().run(
+        db_session,
+        SeedInput(query="bike custom build", source="manual_seed", region="Singapore"),
+        ManualSeedSource(seed_file),
+    )
+    db_session.commit()
+
+    lead = db_session.scalar(select(Lead))
+    assert summary.status is DiscoveryRunStatus.SUCCESS
+    assert lead is not None
+    assert lead.business_type.value == "BIKE_WORKSHOP"
+    assert lead.score == 90
+    assert lead.score_band is ScoreBand.A
+    assert len(lead.score_reasons) == 11
+    assert db_session.scalar(select(func.count()).select_from(Evidence)) == 11

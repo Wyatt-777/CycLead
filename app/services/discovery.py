@@ -13,8 +13,11 @@ from app.models import (
     Lead,
     RawCandidate,
 )
+from app.pipeline.classifier import LeadClassifier
 from app.pipeline.parser import CandidateParseError, CandidateParser, ParsedCandidate
+from app.pipeline.scorer import LeadScorer
 from app.schemas import SeedInput
+from app.services.evidence_service import EvidencePersistenceService
 from app.services.lead_service import LeadPersistenceService
 from app.services.seed_manager import SeedManager
 from app.sources import LeadSource, ManualSeedFileError, RawCandidateData
@@ -47,10 +50,16 @@ class DiscoveryService:
         seed_manager: SeedManager | None = None,
         parser: CandidateParser | None = None,
         lead_service: LeadPersistenceService | None = None,
+        classifier: LeadClassifier | None = None,
+        scorer: LeadScorer | None = None,
+        evidence_service: EvidencePersistenceService | None = None,
     ) -> None:
         self._seed_manager = seed_manager or SeedManager()
         self._parser = parser or CandidateParser()
         self._lead_service = lead_service or LeadPersistenceService()
+        self._classifier = classifier or LeadClassifier()
+        self._scorer = scorer or LeadScorer()
+        self._evidence_service = evidence_service or EvidencePersistenceService()
 
     def run(self, session: Session, seed: SeedInput, source: LeadSource) -> DiscoverySummary:
         """Run one source while isolating source and parser failures from good records."""
@@ -103,9 +112,20 @@ class DiscoveryService:
 
         try:
             parsed = self._parser.parse(candidate)
-            persistence_result = self._lead_service.assess_and_persist(
-                session, self._lead_from_parsed(parsed)
-            )
+            classification = self._classifier.classify(parsed)
+            scoring = self._scorer.score(parsed, classification)
+            lead = self._lead_from_parsed(parsed)
+            lead.business_type = classification.business_type
+            lead.score = scoring.score
+            lead.score_band = scoring.score_band
+            lead.score_reasons = [reason.text for reason in scoring.reasons]
+            persistence_result = self._lead_service.assess_and_persist(session, lead)
+            if persistence_result.created:
+                evidence_drafts = (
+                    *(item for item in (classification.evidence,) if item is not None),
+                    *scoring.evidences,
+                )
+                self._evidence_service.persist(session, persistence_result.lead, evidence_drafts)
         except (CandidateParseError, ValueError) as error:
             raw_candidate.processing_status = CandidateProcessingStatus.ERROR
             raw_candidate.error_detail = str(error)
