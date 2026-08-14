@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "status": "PENDING_MANUAL_LABELING",
+  "required_counts": {
+    "positive": 20,
+    "negative": 20
+  },
+  "leads": []
+}
