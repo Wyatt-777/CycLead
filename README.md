@@ -63,6 +63,24 @@ uvicorn app.main:app --reload
 
 业务发现、解析、去重、评分、审核和导出功能会按照 MVP 实施顺序逐步加入，尚未实现时不得由命令行或 API 宣称可用。
 
+## 人工种子发现
+
+当前唯一实现的来源是本地 JSON 人工种子，不会访问第三方网站。可从
+`fixtures/manual_seeds.example.json` 复制格式；每条记录至少提供 `url` 与 `title`，可选字段包括
+`snippet`、`country`、`city`、`website`、`social_url`、`email`、`phone` 和 `services`。
+
+先运行迁移，再执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m app.cli discover `
+  --query "bike custom build" `
+  --source manual_seed `
+  --input fixtures/manual_seeds.example.json `
+  --region Singapore
+```
+
+命令输出本次运行的 JSON summary。无效单条记录会计入 `errors` 并继续处理其他记录；无法读取整个输入文件时，运行状态为 `FAILED`。
+
 ## 推荐第一条 Codex 指令
 
 ```text

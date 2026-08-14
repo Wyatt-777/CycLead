@@ -31,6 +31,10 @@ class DiscoveryRunInput(InputModel):
     source: str = Field(min_length=1, max_length=64)
 
 
+class SeedInput(DiscoveryRunInput):
+    region: str | None = Field(default=None, max_length=128)
+
+
 class RawCandidateInput(InputModel):
     source: str = Field(min_length=1, max_length=64)
     url: str = Field(min_length=1)

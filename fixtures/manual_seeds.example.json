@@ -1,0 +1,16 @@
+{
+  "candidates": [
+    {
+      "url": "https://example.test/example-bike-studio",
+      "title": "Example Bike Studio",
+      "snippet": "Custom bike builds and component upgrades.",
+      "country": "SG",
+      "city": "Singapore",
+      "website": "https://example.test",
+      "services": [
+        "custom bike build",
+        "component upgrade"
+      ]
+    }
+  ]
+}

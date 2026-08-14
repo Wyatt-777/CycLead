@@ -46,6 +46,7 @@ class LeadPersistenceService:
 
         self._apply_identity(lead, identity)
         session.add(lead)
+        session.flush()
         return LeadPersistenceResult(
             lead=lead,
             normalized_identity=identity,

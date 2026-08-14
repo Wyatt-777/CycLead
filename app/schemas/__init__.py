@@ -6,6 +6,7 @@ from app.schemas.inputs import (
     LeadInput,
     RawCandidateInput,
     ReviewInput,
+    SeedInput,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "LeadInput",
     "RawCandidateInput",
     "ReviewInput",
+    "SeedInput",
 ]
