@@ -63,7 +63,9 @@ def discover(arguments: argparse.Namespace) -> int:
     try:
         session_factory = create_session_factory(engine)
         with session_scope(session_factory) as session:
-            summary = DiscoveryService().run(
+            summary = DiscoveryService(
+                qualification_threshold=settings.qualification_threshold
+            ).run(
                 session,
                 SeedInput(query=arguments.query, source=arguments.source, region=arguments.region),
                 ManualSeedSource(arguments.input),

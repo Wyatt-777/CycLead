@@ -15,6 +15,7 @@ from app.models import (
 )
 from app.pipeline.classifier import LeadClassifier
 from app.pipeline.parser import CandidateParseError, CandidateParser, ParsedCandidate
+from app.pipeline.qualifier import LeadQualifier, QualificationResult
 from app.pipeline.scorer import LeadScorer
 from app.schemas import SeedInput
 from app.services.evidence_service import EvidencePersistenceService
@@ -53,6 +54,8 @@ class DiscoveryService:
         classifier: LeadClassifier | None = None,
         scorer: LeadScorer | None = None,
         evidence_service: EvidencePersistenceService | None = None,
+        qualifier: LeadQualifier | None = None,
+        qualification_threshold: int = 60,
     ) -> None:
         self._seed_manager = seed_manager or SeedManager()
         self._parser = parser or CandidateParser()
@@ -60,6 +63,7 @@ class DiscoveryService:
         self._classifier = classifier or LeadClassifier()
         self._scorer = scorer or LeadScorer()
         self._evidence_service = evidence_service or EvidencePersistenceService()
+        self._qualifier = qualifier or LeadQualifier(qualification_threshold)
 
     def run(self, session: Session, seed: SeedInput, source: LeadSource) -> DiscoverySummary:
         """Run one source while isolating source and parser failures from good records."""
@@ -126,6 +130,8 @@ class DiscoveryService:
                     *scoring.evidences,
                 )
                 self._evidence_service.persist(session, persistence_result.lead, evidence_drafts)
+                qualification = self._qualifier.assess(persistence_result.lead)
+                self._record_qualification(run, candidate, qualification)
         except (CandidateParseError, ValueError) as error:
             raw_candidate.processing_status = CandidateProcessingStatus.ERROR
             raw_candidate.error_detail = str(error)
@@ -173,6 +179,28 @@ class DiscoveryService:
             source,
             source_error.record_index,
             source_error.message,
+        )
+
+    @staticmethod
+    def _record_qualification(
+        run: DiscoveryRun,
+        candidate: RawCandidateData,
+        qualification: QualificationResult,
+    ) -> None:
+        if qualification.qualified:
+            run.qualified_count += 1
+            result = "qualified"
+        else:
+            run.rejected_count += 1
+            result = "not_qualified"
+        LOGGER.info(
+            "run_id=%s source=%s url=%s stage=qualify result=%s threshold=%s reason=%s",
+            run.id,
+            candidate.source,
+            candidate.url,
+            result,
+            qualification.threshold,
+            qualification.reason,
         )
 
     @staticmethod

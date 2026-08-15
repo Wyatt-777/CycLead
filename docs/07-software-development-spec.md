@@ -20,15 +20,20 @@ MVP 的交付物是“推荐联系名单”，不是自动联系行为。
 
 ### 1.2 当前实现状态
 
-当前仓库已完成 Phase 1 数据基础和手工验证闭环：Python 包、依赖清单、最小 FastAPI 健康检查、版本 CLI、Pydantic 输入契约、SQLite ORM 模型、Alembic 迁移、确定性归一化、优先级去重、人工种子来源、结构化候选解析、运行统计、分类、固定规则评分、Evidence 生成与幂等写入、测试框架、配置模板和 golden dataset 标注合同。网页来源适配器、非结构化 HTML 解析、审核服务、导出和真实人工标注的 golden dataset 尚未实现。本文档其余内容描述待实施的目标状态，不表示这些组件已经存在。
+当前仓库已完成 Phase 1 数据基础和手工验证闭环：Python 包、依赖清单、最小 FastAPI 健康检查、版本 CLI、Pydantic 输入契约、SQLite ORM 模型、Alembic 迁移、确定性归一化、优先级去重、人工种子来源、结构化候选解析、运行统计、分类、固定规则评分、Evidence 生成与幂等写入、资格筛选、测试框架、配置模板和 golden dataset 标注合同。网页来源适配器、非结构化 HTML 解析、审核服务、导出和真实人工标注的 golden dataset 尚未实现。本文档其余内容描述待实施的目标状态，不表示这些组件已经存在。
 
-### 1.3 M06-M08 implementation status (2026-08-15)
+### 1.3 M06-M09 implementation status (2026-08-15)
 
 The repository now implements a conservative rule-based classifier, the fixed Phase 1
 scorer with category caps and A-D bands, readable score reasons, and evidence persistence
 with provenance validation and per-lead idempotence. Manual Seed discovery runs these
 stages only for new leads; confirmed duplicates retain their original score and evidence,
 while their new raw candidate remains retained for audit.
+
+Qualification uses the validated `CYCLELEAD_QUALIFICATION_THRESHOLD` (default 60) and
+requires a non-`UNRELATED` business type. Each run records newly qualified and
+not-qualified leads separately; confirmed duplicates are excluded from both counts.
+Qualification is eligibility for later human review, not an automatic `REJECT` decision.
 
 Manual Seed has no dated activity field, so activity scoring is deliberately zero until a
 compliant source adapter supplies a dated public activity claim. The checked-in golden

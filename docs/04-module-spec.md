@@ -294,6 +294,19 @@ business_type != UNRELATED
 threshold = 60
 ```
 
+## M09 Phase 1 v1 implementation contract
+
+- `CYCLELEAD_QUALIFICATION_THRESHOLD` is validated as an integer from 0 to 100 and
+  defaults to 60. The CLI passes this setting into each discovery run.
+- A newly created lead qualifies only when `score >= threshold` and its business type
+  is not `UNRELATED`. The threshold comparison is inclusive.
+- A qualifying new lead increments `DiscoveryRun.qualified_count`; a newly created lead
+  that does not qualify increments `DiscoveryRun.rejected_count`. Confirmed duplicates
+  increment only `duplicate_count` and are not counted again as qualified or rejected.
+- M09 records review eligibility and a structured qualification log. It does not set a
+  human `REJECT` decision or contact anyone. M10 will expose the eligible leads for
+  human review and preserve its manual decisions.
+
 ---
 
 # M10 — Review Queue

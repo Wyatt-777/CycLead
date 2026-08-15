@@ -58,7 +58,11 @@ def test_manual_discovery_persists_candidates_and_is_idempotent(
     assert first_run.discovered == 2
     assert first_run.parsed == 2
     assert first_run.duplicates == 1
+    assert first_run.qualified == 0
+    assert first_run.rejected == 1
     assert second_run.duplicates == 2
+    assert second_run.qualified == 0
+    assert second_run.rejected == 0
     assert db_session.scalar(select(func.count()).select_from(Lead)) == 1
     assert db_session.scalar(select(func.count()).select_from(RawCandidate)) == 4
     assert db_session.scalar(select(func.count()).select_from(DiscoveryRun)) == 2
@@ -146,3 +150,5 @@ def test_manual_discovery_scores_a_source_backed_lead_and_persists_evidence(
     assert lead.score_band is ScoreBand.A
     assert len(lead.score_reasons) == 11
     assert db_session.scalar(select(func.count()).select_from(Evidence)) == 11
+    assert summary.qualified == 1
+    assert summary.rejected == 0
