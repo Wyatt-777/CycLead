@@ -323,6 +323,21 @@ CONTACT_LATER
 
 人工判断必须保留，用于以后改进评分规则。
 
+## M10 Phase 1 v1 implementation contract
+
+- `review-queue` lists leads whose current score meets the configured qualification
+  threshold, whose business type is not `UNRELATED`, and whose `review_status` is `NEW`.
+  The queue is ordered by descending score, then creation time.
+- `review --lead-id <id> --decision <ACCEPT|REJECT|CONTACT_LATER> --reason <text>`
+  validates the decision and a nonblank reason before writing data.
+- Each decision appends a new `Review` record. `Lead.review_status` shows the latest
+  decision for queue display; earlier records are never changed or deleted.
+- A missing or currently nonqualified lead is rejected with an explicit error. A lead
+  that was previously reviewed may receive a later manual decision, preserving both
+  decisions in history.
+- Review records are local human judgments only. They do not send messages, change an
+  outreach state, or infer new contact information.
+
 ---
 
 # M11 — Export

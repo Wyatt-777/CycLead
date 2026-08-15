@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 from pydantic import ValidationError
 from pytest import raises
 
-from app.models.enums import EvidenceType
-from app.schemas import EvidenceInput, LeadInput, RawCandidateInput
+from app.models.enums import EvidenceType, ReviewDecision
+from app.schemas import EvidenceInput, LeadInput, RawCandidateInput, ReviewInput
 
 
 def test_lead_input_strips_values_and_preserves_unknown_contacts() -> None:
@@ -57,3 +57,14 @@ def test_evidence_input_requires_traceable_source_and_bounded_confidence() -> No
             captured_at=datetime.now(timezone.utc),
             confidence=1.1,
         )
+
+
+def test_review_input_requires_a_known_decision_and_nonblank_reason() -> None:
+    review = ReviewInput(decision=ReviewDecision.ACCEPT, reason="  Verified workshop.  ")
+
+    assert review.reason == "Verified workshop."
+
+    with raises(ValidationError):
+        ReviewInput(decision="UNKNOWN", reason="Not a valid review decision.")
+    with raises(ValidationError):
+        ReviewInput(decision=ReviewDecision.REJECT, reason=" ")

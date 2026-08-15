@@ -54,14 +54,14 @@ ruff check .
 .\.venv\Scripts\alembic.exe upgrade head
 ```
 
-当前基础工程只提供版本命令和健康检查：
+当前可用的基础命令包括版本命令和健康检查：
 
 ```powershell
 cyclelead --version
 uvicorn app.main:app --reload
 ```
 
-业务发现、解析、去重、评分、审核和导出功能会按照 MVP 实施顺序逐步加入，尚未实现时不得由命令行或 API 宣称可用。
+人工种子发现、解析、去重、分类、评分、资格筛选和人工审核已可用；CSV/JSON 导出仍待实现。
 
 ## 人工种子发现
 
@@ -80,6 +80,23 @@ uvicorn app.main:app --reload
 ```
 
 命令输出本次运行的 JSON summary。无效单条记录会计入 `errors` 并继续处理其他记录；无法读取整个输入文件时，运行状态为 `FAILED`。
+
+## 人工审核
+
+查看当前达到阈值、尚未人工审核的线索：
+
+```powershell
+.\.venv\Scripts\python.exe -m app.cli review-queue
+```
+
+人工记录决定时必须说明理由；每次决定都会保留历史，但不会发送任何消息：
+
+```powershell
+.\.venv\Scripts\python.exe -m app.cli review `
+  --lead-id <lead-id> `
+  --decision ACCEPT `
+  --reason "Confirmed workshop with purchasing potential."
+```
 
 ## 推荐第一条 Codex 指令
 
