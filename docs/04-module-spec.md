@@ -44,6 +44,21 @@ DiscoveryJob。
 
 必须保存原始 URL。
 
+## M02 Phase 1 v1 implementation contract
+
+- MVP supports local `manual_seed` input and the optional `brave_search` adapter. The latter
+  makes one bounded request to Brave's official Web Search API and never visits result pages,
+  uses a browser, bypasses a login, or evades platform restrictions.
+- A successful Brave result preserves only the API-returned result URL, title, description
+  snippet, capture timestamp, and source type. Unknown business fields and contact details
+  remain unset; this adapter does not enrich them.
+- The API key is read only from local `CYCLELEAD_BRAVE_SEARCH_API_KEY` configuration and must
+  never be logged or committed. Search country, language, result limit (1–20), and timeout
+  are validated configuration values.
+- API request, rate-limit, or malformed-response failures produce a failed run with a readable
+  source-stage log. Invalid individual result records are counted as run errors while valid
+  records continue through the pipeline.
+
 ---
 
 # M03 — Candidate Parser

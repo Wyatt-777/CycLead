@@ -20,7 +20,7 @@ MVP 的交付物是“推荐联系名单”，不是自动联系行为。
 
 ### 1.2 当前实现状态
 
-当前仓库已完成 Phase 1 数据基础和手工验证闭环：Python 包、依赖清单、最小 FastAPI 健康检查、版本 CLI、Pydantic 输入契约、SQLite ORM 模型、Alembic 迁移、确定性归一化、优先级去重、人工种子来源、结构化候选解析、运行统计、分类、固定规则评分、Evidence 生成与幂等写入、资格筛选、人工审核队列、CSV/JSON 导出、持久化运行报告、测试框架、配置模板和 golden dataset 标注合同。网页来源适配器、非结构化 HTML 解析和真实人工标注的 golden dataset 尚未实现。本文档其余内容描述待实施的目标状态，不表示这些组件已经存在。
+当前仓库已完成 Phase 1 数据基础和手工验证闭环：Python 包、依赖清单、最小 FastAPI 健康检查、版本 CLI、Pydantic 输入契约、SQLite ORM 模型、Alembic 迁移、确定性归一化、优先级去重、人工种子来源与一个官方 API 公开搜索来源、结构化候选解析、运行统计、分类、固定规则评分、Evidence 生成与幂等写入、资格筛选、人工审核队列、CSV/JSON 导出、持久化运行报告、测试框架、配置模板和 golden dataset 标注合同。非结构化 HTML 解析和真实人工标注的 golden dataset 尚未实现。本文档其余内容描述待实施的目标状态，不表示这些组件已经存在。
 
 ### 1.3 M06-M12 implementation status (2026-08-20)
 
@@ -47,6 +47,12 @@ fields and current review status, and no export changes data or performs outreac
 Its counts come directly from `DiscoveryRun`, include the recorded status and elapsed time,
 and return `null` rather than fabricating an end time for an unfinished run. Invalid and
 unknown IDs fail clearly without modifying stored data.
+
+The optional `brave_search` source uses a local API key to make one bounded call to the
+official Brave Web Search API. It preserves API-supplied URL, title, description, and capture
+time only; it does not scrape result pages, retrieve private data, or infer missing fields.
+Missing configuration prevents the call. API or response failure is recorded as a failed run,
+while invalid individual result records are isolated and retained in the run error count.
 
 Manual Seed has no dated activity field, so activity scoring is deliberately zero until a
 compliant source adapter supplies a dated public activity claim. The checked-in golden
@@ -179,11 +185,13 @@ cyclelead-ai/
 
 ```bash
 python -m app.cli discover --query "bike workshop" --source manual_seed
+python -m app.cli discover --query "bike workshop" --source brave_search
 python -m app.cli export --format csv --output data/exports/leads.csv
 python -m app.cli report --run-id <run_id>
 ```
 
-`discover` 可接受可选 `--region`。来源名称、查询和导出格式应通过 Pydantic 或等价的显式校验；CLI 对用户输入错误返回非零状态码与可读错误，不创建伪造的 Lead。
+`manual_seed` 需要 `--input <JSON path>`；`brave_search` 需要本地配置的 API key，且不接受
+输入文件。`discover` 可接受可选 `--region`。来源名称、查询和导出格式应通过 Pydantic 或等价的显式校验；CLI 对用户输入错误返回非零状态码与可读错误，不创建伪造的 Lead。
 
 FastAPI 如实施，仅提供本地调用所需的健康检查、运行、线索查询、审核和导出端点；它不应成为实现核心业务逻辑的唯一入口。
 
@@ -195,7 +203,7 @@ FastAPI 如实施，仅提供本地调用所需的健康检查、运行、线索
 | API | FastAPI + Uvicorn | 本地、薄适配层；没有 UI 依赖 |
 | 校验 | Pydantic v2 | CLI/API/服务边界的数据校验 |
 | 持久化 | SQLite + SQLAlchemy 2.x + Alembic | 单用户数据库、可迁移 schema、保留历史运行数据 |
-| HTTP | HTTPX | 有超时的公开网页请求 |
+| HTTP | HTTPX | 有超时的官方 API 请求；当前用于 Brave Web Search |
 | HTML 解析 | BeautifulSoup4 + lxml | 公开 HTML 的确定性解析 |
 | 归一化 | 标准库 `urllib`、`email`；`phonenumbers` | URL、邮箱、电话的确定性处理 |
 | 导出 | Python 标准库 `csv`、`json` | UTF-8 CSV 与 JSON |
@@ -232,7 +240,7 @@ FastAPI 如实施，仅提供本地调用所需的健康检查、运行、线索
 | 0. 基础工程 | `pyproject.toml`、应用包、配置、测试框架、Ruff、`.env.example` | 空项目可安装；`pytest` 可运行 |
 | 1. 数据契约与存储 | Pydantic、ORM、枚举、迁移、run 和 raw candidate 保存 | 可创建数据库并写入/读取示例运行 |
 | 2. 核心流水线 | Parser、Normalizer、Deduplicator、Classifier、Scorer、Evidence、Qualifier | 样本可稳定得到可解释结果；重复运行幂等 |
-| 3. 来源与运行服务 | Manual Seed + 一个合规来源、错误隔离、结构化日志 | 单条来源失败不会中断批处理 |
+| 3. 来源与运行服务 | Manual Seed + Brave 官方搜索 API、错误隔离、结构化日志 | 单条来源失败不会中断批处理 |
 | 4. 审核与导出 | 审核记录、CSV/JSON、报告、CLI；可选本地 API | 可审核、导出、回看任意 run |
 | 5. 验收 | 40 条 golden dataset、集成测试、文档核对 | 满足第 10 节的所有 P0 验收项 |
 

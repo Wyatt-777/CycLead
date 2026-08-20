@@ -8,10 +8,15 @@ from typing import Any
 from pydantic import Field, ValidationError, field_validator
 
 from app.schemas.inputs import InputModel, validate_public_url
-from app.sources.base import RawCandidateData, SourceDiscoveryResult, SourceRecordError
+from app.sources.base import (
+    RawCandidateData,
+    SourceDiscoveryError,
+    SourceDiscoveryResult,
+    SourceRecordError,
+)
 
 
-class ManualSeedFileError(ValueError):
+class ManualSeedFileError(SourceDiscoveryError):
     """The seed file itself cannot be opened or interpreted as a candidate collection."""
 
 

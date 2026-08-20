@@ -61,7 +61,7 @@ cyclelead --version
 uvicorn app.main:app --reload
 ```
 
-人工种子发现、解析、去重、分类、评分、资格筛选、人工审核、CSV/JSON 导出与持久化运行报告已可用。
+人工种子发现、公开搜索 API 发现、解析、去重、分类、评分、资格筛选、人工审核、CSV/JSON 导出与持久化运行报告已可用。
 
 ## 人工种子发现
 
@@ -80,6 +80,30 @@ uvicorn app.main:app --reload
 ```
 
 命令输出本次运行的 JSON summary。无效单条记录会计入 `errors` 并继续处理其他记录；无法读取整个输入文件时，运行状态为 `FAILED`。
+
+## 公开网页搜索（Brave Search API）
+
+这是可选的第二来源。它只调用 Brave 的官方 Web Search API 一次，保存 API 返回的结果 URL、标题、描述片段和抓取时间；不会打开搜索结果页面、绕过登录或 CAPTCHA，也不会推测联系方式。
+
+先在本地 `.env`（不要提交）配置 API key 和地域参数：
+
+```dotenv
+CYCLELEAD_BRAVE_SEARCH_API_KEY=<your-local-api-key>
+CYCLELEAD_BRAVE_SEARCH_COUNTRY=SG
+CYCLELEAD_BRAVE_SEARCH_LANGUAGE=en
+CYCLELEAD_BRAVE_SEARCH_RESULT_COUNT=10
+CYCLELEAD_BRAVE_SEARCH_TIMEOUT_SECONDS=10
+```
+
+随后运行：
+
+```powershell
+.\.venv\Scripts\python.exe -m app.cli discover `
+  --query "bike workshop Singapore" `
+  --source brave_search
+```
+
+`CYCLELEAD_BRAVE_SEARCH_RESULT_COUNT` 限制为 1–20，避免单次获取过多结果。未配置 key 时命令会在发起网络请求前返回可读错误；认证、限流或响应格式失败时会写入一条 `FAILED` run，便于用 `report` 回看。
 
 ## 人工审核
 

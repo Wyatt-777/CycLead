@@ -7,6 +7,10 @@ from typing import Protocol
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class SourceDiscoveryError(ValueError):
+    """A source request or response failed before it produced a candidate collection."""
+
+
 class RawCandidateData(BaseModel):
     """Source output retained before parsing and normalization."""
 

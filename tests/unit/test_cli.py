@@ -7,6 +7,7 @@ from pytest import raises
 
 from app import __version__
 from app.cli import main
+from app.config import Settings
 from app.db import Base, create_db_engine, create_session_factory
 from app.models import (
     BusinessType,
@@ -66,6 +67,25 @@ def test_cli_runs_manual_discovery_against_configured_database(tmp_path: Path, c
 
     assert exit_code == 0
     assert json.loads(capsys.readouterr().out)["discovered"] == 1
+
+
+def test_cli_requires_an_input_file_for_manual_seed_discovery(capsys) -> None:
+    exit_code = main(["discover", "--query", "bike workshop", "--source", "manual_seed"])
+
+    assert exit_code == 2
+    assert "--input is required" in capsys.readouterr().err
+
+
+def test_cli_requires_local_configuration_before_brave_search(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        "app.cli.get_settings",
+        lambda: Settings(brave_search_api_key=None, _env_file=None),
+    )
+
+    exit_code = main(["discover", "--query", "bike workshop", "--source", "brave_search"])
+
+    assert exit_code == 2
+    assert "CYCLELEAD_BRAVE_SEARCH_API_KEY" in capsys.readouterr().err
 
 
 def test_cli_lists_and_records_manual_reviews(tmp_path: Path, capsys) -> None:

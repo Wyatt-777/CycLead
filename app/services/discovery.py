@@ -21,7 +21,7 @@ from app.schemas import SeedInput
 from app.services.evidence_service import EvidencePersistenceService
 from app.services.lead_service import LeadPersistenceService
 from app.services.seed_manager import SeedManager
-from app.sources import LeadSource, ManualSeedFileError, RawCandidateData
+from app.sources import LeadSource, RawCandidateData, SourceDiscoveryError
 from app.sources.base import SourceRecordError
 
 LOGGER = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ class DiscoveryService:
 
         try:
             source_result = source.discover()
-        except ManualSeedFileError as error:
+        except SourceDiscoveryError as error:
             self._mark_source_failure(run, error)
             return self._summary(run)
 
@@ -166,11 +166,11 @@ class DiscoveryService:
         )
 
     @staticmethod
-    def _mark_source_failure(run: DiscoveryRun, error: ManualSeedFileError) -> None:
+    def _mark_source_failure(run: DiscoveryRun, error: SourceDiscoveryError) -> None:
         run.status = DiscoveryRunStatus.FAILED
         run.error_count = 1
         run.finished_at = datetime.now(timezone.utc)
-        LOGGER.warning("source=%s stage=load_seed_file error=%s", run.source, error)
+        LOGGER.warning("source=%s stage=discover_source error=%s", run.source, error)
 
     @staticmethod
     def _log_source_error(source: str, source_error: SourceRecordError) -> None:

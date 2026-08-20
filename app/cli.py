@@ -23,7 +23,7 @@ from app.services.review_service import (
     LeadNotFoundError,
     ReviewService,
 )
-from app.sources import ManualSeedSource
+from app.sources import BraveSearchSource, LeadSource, ManualSeedSource
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,8 +36,10 @@ def build_parser() -> argparse.ArgumentParser:
         "discover", help="run a compliant lead-discovery source"
     )
     discover_parser.add_argument("--query", required=True)
-    discover_parser.add_argument("--source", choices=["manual_seed"], required=True)
-    discover_parser.add_argument("--input", required=True, type=Path, help="manual-seed JSON file")
+    discover_parser.add_argument("--source", choices=["manual_seed", "brave_search"], required=True)
+    discover_parser.add_argument(
+        "--input", type=Path, help="manual-seed JSON file; required only for source manual_seed"
+    )
     discover_parser.add_argument("--region")
     discover_parser.add_argument(
         "--database-url",
@@ -114,9 +116,20 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def discover(arguments: argparse.Namespace) -> int:
-    """Run the local manual-seed source and print a machine-readable run summary."""
+    """Run the selected compliant source and print a machine-readable run summary."""
 
-    settings = get_settings()
+    try:
+        settings = get_settings()
+        seed = SeedInput(
+            query=arguments.query,
+            source=arguments.source,
+            region=arguments.region,
+        )
+        source = _discovery_source(arguments, settings)
+    except (ValidationError, ValueError) as error:
+        print(f"Invalid discovery input: {error}", file=sys.stderr)
+        return 2
+
     database_url = arguments.database_url or settings.database_url
     engine = create_db_engine(database_url)
 
@@ -127,8 +140,8 @@ def discover(arguments: argparse.Namespace) -> int:
                 qualification_threshold=settings.qualification_threshold
             ).run(
                 session,
-                SeedInput(query=arguments.query, source=arguments.source, region=arguments.region),
-                ManualSeedSource(arguments.input),
+                seed,
+                source,
             )
         print(json.dumps(asdict(summary), default=str, ensure_ascii=False))
         return 0 if summary.status is not DiscoveryRunStatus.FAILED else 1
@@ -140,6 +153,31 @@ def discover(arguments: argparse.Namespace) -> int:
         return 1
     finally:
         engine.dispose()
+
+
+def _discovery_source(arguments: argparse.Namespace, settings) -> LeadSource:
+    """Build only the explicitly selected local or API-backed source adapter."""
+
+    if arguments.source == "manual_seed":
+        if arguments.input is None:
+            raise ValueError("--input is required when --source manual_seed")
+        return ManualSeedSource(arguments.input)
+
+    if arguments.input is not None:
+        raise ValueError("--input is only supported when --source manual_seed")
+    api_key = (
+        settings.brave_search_api_key.get_secret_value()
+        if settings.brave_search_api_key is not None
+        else None
+    )
+    return BraveSearchSource(
+        query=arguments.query,
+        api_key=api_key,
+        country=settings.brave_search_country,
+        search_language=settings.brave_search_language,
+        result_count=settings.brave_search_result_count,
+        timeout_seconds=settings.brave_search_timeout_seconds,
+    )
 
 
 def list_review_queue(arguments: argparse.Namespace) -> int:
