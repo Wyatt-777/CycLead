@@ -398,6 +398,19 @@ Rejected
 Errors
 ```
 
+## M12 Phase 1 v1 implementation contract
+
+- `report --run-id <uuid>` validates the run ID and reads exactly one persisted
+  `DiscoveryRun`. It never reconstructs counts from logs or changes the run, lead, review,
+  evidence, or outreach state.
+- The JSON output includes the required run ID, query, source, start/end timestamps,
+  discovered, parsed, duplicates, qualified, rejected, and errors fields, along with the
+  persisted run status and `elapsed_seconds` required for run observability.
+- `elapsed_seconds` is calculated from the persisted start and finish timestamps. It is
+  `null` for an unfinished run; the reporter does not invent a finish timestamp.
+- An invalid ID returns a validation error. A well-formed but unknown ID returns a readable
+  non-zero error; database failures identify report reading as the failed operation.
+
 ---
 
 # M13 — Research Enrichment（Phase 2）

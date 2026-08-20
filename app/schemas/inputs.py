@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Literal
 from urllib.parse import urlparse
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -81,3 +82,7 @@ class ReviewInput(InputModel):
 class ExportInput(InputModel):
     format: Literal["csv", "json"]
     scope: Literal["accepted", "qualified", "all"] = "accepted"
+
+
+class RunReportInput(InputModel):
+    run_id: UUID

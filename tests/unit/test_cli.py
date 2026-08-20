@@ -1,5 +1,6 @@
 import csv
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from pytest import raises
@@ -7,7 +8,14 @@ from pytest import raises
 from app import __version__
 from app.cli import main
 from app.db import Base, create_db_engine, create_session_factory
-from app.models import BusinessType, Lead, ReviewStatus, ScoreBand
+from app.models import (
+    BusinessType,
+    DiscoveryRun,
+    DiscoveryRunStatus,
+    Lead,
+    ReviewStatus,
+    ScoreBand,
+)
 
 
 def test_cli_returns_success_without_arguments() -> None:
@@ -163,3 +171,50 @@ def test_cli_exports_human_accepted_leads(tmp_path: Path, capsys) -> None:
     assert payload["scope"] == "accepted"
     assert payload["exported"] == 1
     assert rows[0]["lead_id"] == lead.id
+
+
+def test_cli_reports_a_persisted_discovery_run(tmp_path: Path, capsys) -> None:
+    database_path = tmp_path / "reports.db"
+    database_url = f"sqlite:///{database_path.as_posix()}"
+    engine = create_db_engine(database_url)
+    Base.metadata.create_all(engine)
+    session = create_session_factory(engine)()
+    started_at = datetime(2026, 8, 20, 9, 0, tzinfo=timezone.utc)
+    run = DiscoveryRun(
+        query="bike workshop",
+        source="manual_seed",
+        status=DiscoveryRunStatus.SUCCESS,
+        started_at=started_at,
+        finished_at=started_at + timedelta(seconds=2),
+        discovered_count=3,
+        parsed_count=3,
+        duplicate_count=1,
+        qualified_count=1,
+        rejected_count=1,
+        error_count=0,
+    )
+    session.add(run)
+    session.commit()
+    run_id = run.id
+    session.close()
+    engine.dispose()
+
+    exit_code = main(["report", "--run-id", run_id, "--database-url", database_url])
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload == {
+        "run_id": run_id,
+        "query": "bike workshop",
+        "source": "manual_seed",
+        "status": "SUCCESS",
+        "started_at": "2026-08-20T09:00:00",
+        "finished_at": "2026-08-20T09:00:02",
+        "elapsed_seconds": 2.0,
+        "discovered": 3,
+        "parsed": 3,
+        "duplicates": 1,
+        "qualified": 1,
+        "rejected": 1,
+        "errors": 0,
+    }

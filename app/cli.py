@@ -14,9 +14,10 @@ from app import __version__
 from app.config import get_settings
 from app.db import create_db_engine, create_session_factory, session_scope
 from app.models import DiscoveryRunStatus, Lead
-from app.schemas import ExportInput, ReviewInput, SeedInput
+from app.schemas import ExportInput, ReviewInput, RunReportInput, SeedInput
 from app.services.discovery import DiscoveryService
 from app.services.export_service import LeadExportService
+from app.services.report_service import DiscoveryRunNotFoundError, RunReport, RunReportService
 from app.services.review_service import (
     LeadNotEligibleForReviewError,
     LeadNotFoundError,
@@ -26,11 +27,7 @@ from app.sources import ManualSeedSource
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the Phase 0 command parser.
-
-    Export and report commands are intentionally added with their corresponding
-    implementation phases so the CLI never advertises unavailable work.
-    """
+    """Build the implemented CycleLead MVP command parser."""
 
     parser = argparse.ArgumentParser(prog="cyclelead", description="CycleLead AI MVP")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -85,6 +82,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--database-url",
         help="override the local SQLite URL for this command only",
     )
+
+    report_parser = subparsers.add_parser(
+        "report", help="show one persisted discovery run and its recorded metrics"
+    )
+    report_parser.add_argument("--run-id", required=True)
+    report_parser.add_argument(
+        "--database-url",
+        help="override the local SQLite URL for this command only",
+    )
     return parser
 
 
@@ -102,6 +108,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return record_review(arguments)
     if arguments.command == "export":
         return export_leads(arguments)
+    if arguments.command == "report":
+        return report_run(arguments)
     return 0
 
 
@@ -240,6 +248,37 @@ def export_leads(arguments: argparse.Namespace) -> int:
         engine.dispose()
 
 
+def report_run(arguments: argparse.Namespace) -> int:
+    """Validate a run ID and print only its persisted execution metrics."""
+
+    try:
+        report_input = RunReportInput(run_id=arguments.run_id)
+    except ValidationError as error:
+        print(f"Invalid report input: {error}", file=sys.stderr)
+        return 2
+
+    settings = get_settings()
+    database_url = arguments.database_url or settings.database_url
+    engine = create_db_engine(database_url)
+    try:
+        session_factory = create_session_factory(engine)
+        with session_scope(session_factory) as session:
+            report = RunReportService().get(session, str(report_input.run_id))
+        print(json.dumps(_report_payload(report), ensure_ascii=False))
+        return 0
+    except DiscoveryRunNotFoundError as error:
+        print(f"Report error: {error}", file=sys.stderr)
+        return 1
+    except SQLAlchemyError as error:
+        print(
+            f"Database error: {error}. Run 'alembic upgrade head' before reading reports.",
+            file=sys.stderr,
+        )
+        return 1
+    finally:
+        engine.dispose()
+
+
 def _queue_item(lead: Lead) -> dict[str, object]:
     """Return the minimal manual-review payload without inferring missing lead fields."""
 
@@ -257,6 +296,26 @@ def _queue_item(lead: Lead) -> dict[str, object]:
         "email": lead.email,
         "phone": lead.phone,
         "source_url": lead.source_url,
+    }
+
+
+def _report_payload(report: RunReport) -> dict[str, object]:
+    """Serialize timestamps explicitly without inventing missing finish data."""
+
+    return {
+        "run_id": report.run_id,
+        "query": report.query,
+        "source": report.source,
+        "status": report.status.value,
+        "started_at": report.started_at.isoformat(),
+        "finished_at": report.finished_at.isoformat() if report.finished_at else None,
+        "elapsed_seconds": report.elapsed_seconds,
+        "discovered": report.discovered,
+        "parsed": report.parsed,
+        "duplicates": report.duplicates,
+        "qualified": report.qualified,
+        "rejected": report.rejected,
+        "errors": report.errors,
     }
 
 

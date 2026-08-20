@@ -61,7 +61,7 @@ cyclelead --version
 uvicorn app.main:app --reload
 ```
 
-人工种子发现、解析、去重、分类、评分、资格筛选、人工审核与 CSV/JSON 导出已可用。
+人工种子发现、解析、去重、分类、评分、资格筛选、人工审核、CSV/JSON 导出与持久化运行报告已可用。
 
 ## 人工种子发现
 
@@ -118,6 +118,17 @@ uvicorn app.main:app --reload
 ```
 
 CSV 使用 UTF-8 with BOM，并始终保留表头；JSON 输出 UTF-8 数组。导出不会发送消息或改变任何线索状态。
+
+## 运行报告
+
+使用发现命令输出的 `run_id` 回看该次已持久化的执行统计：
+
+```powershell
+.\.venv\Scripts\python.exe -m app.cli report `
+  --run-id <run-id>
+```
+
+报告直接读取数据库中的查询、来源、状态、开始/结束时间、耗时及 discovered、parsed、duplicates、qualified、rejected、errors 计数；不会从日志猜测数据，也不会修改记录。未结束运行的 `finished_at` 和 `elapsed_seconds` 为 `null`。
 
 ## 推荐第一条 Codex 指令
 

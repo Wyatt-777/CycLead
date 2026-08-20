@@ -4,7 +4,14 @@ from pydantic import ValidationError
 from pytest import raises
 
 from app.models.enums import EvidenceType, ReviewDecision
-from app.schemas import EvidenceInput, ExportInput, LeadInput, RawCandidateInput, ReviewInput
+from app.schemas import (
+    EvidenceInput,
+    ExportInput,
+    LeadInput,
+    RawCandidateInput,
+    ReviewInput,
+    RunReportInput,
+)
 
 
 def test_lead_input_strips_values_and_preserves_unknown_contacts() -> None:
@@ -79,3 +86,11 @@ def test_export_input_requires_a_known_format_and_scope() -> None:
         ExportInput(format="xlsx")
     with raises(ValidationError):
         ExportInput(format="json", scope="rejected")
+
+
+def test_run_report_input_requires_a_uuid() -> None:
+    report = RunReportInput(run_id="20e79169-4867-4076-aaf0-864c9ea6cdf7")
+
+    assert str(report.run_id) == "20e79169-4867-4076-aaf0-864c9ea6cdf7"
+    with raises(ValidationError):
+        RunReportInput(run_id="not-a-run-id")
