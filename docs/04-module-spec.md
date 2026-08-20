@@ -360,6 +360,24 @@ status
 created_at
 ```
 
+## M11 Phase 1 v1 implementation contract
+
+- `export --format <csv|json> --output <path>` writes lead records without changing any
+  lead, score, evidence, review, or outreach state. The output extension must match the
+  requested format.
+- The default `accepted` scope exports only leads whose latest human `review_status` is
+  `ACCEPT`, so the default file is a human-approved recommended-contact list. Explicit
+  `qualified` and `all` scopes are available for review and audit.
+- `qualified` applies the current configured score threshold and excludes `UNRELATED`.
+  `all` includes every persisted lead. Every record includes the documented CSV fields,
+  including the current human review status.
+- CSV is UTF-8 with BOM for spreadsheet compatibility and always contains its header.
+  JSON is a UTF-8 array. Empty exports produce a header-only CSV or `[]` JSON document.
+  In CSV, `score_reason` is a JSON-encoded list; unknown nullable fields remain blank.
+- The writer creates the requested parent directory and replaces the destination only
+  after a complete temporary file has been written. Filesystem or validation failures
+  return a readable error containing the requested destination.
+
 ---
 
 # M12 — Run Reporter

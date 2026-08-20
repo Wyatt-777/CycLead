@@ -1,6 +1,7 @@
 """Pydantic contracts at service boundaries before persistence or pipeline work."""
 
 from datetime import datetime
+from typing import Literal
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -75,3 +76,8 @@ class EvidenceInput(InputModel):
 class ReviewInput(InputModel):
     decision: ReviewDecision
     reason: str = Field(min_length=1)
+
+
+class ExportInput(InputModel):
+    format: Literal["csv", "json"]
+    scope: Literal["accepted", "qualified", "all"] = "accepted"

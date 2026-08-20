@@ -3,6 +3,7 @@
 from app.schemas.inputs import (
     DiscoveryRunInput,
     EvidenceInput,
+    ExportInput,
     LeadInput,
     RawCandidateInput,
     ReviewInput,
@@ -12,6 +13,7 @@ from app.schemas.inputs import (
 __all__ = [
     "DiscoveryRunInput",
     "EvidenceInput",
+    "ExportInput",
     "LeadInput",
     "RawCandidateInput",
     "ReviewInput",

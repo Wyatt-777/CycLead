@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from pytest import raises
 
 from app.models.enums import EvidenceType, ReviewDecision
-from app.schemas import EvidenceInput, LeadInput, RawCandidateInput, ReviewInput
+from app.schemas import EvidenceInput, ExportInput, LeadInput, RawCandidateInput, ReviewInput
 
 
 def test_lead_input_strips_values_and_preserves_unknown_contacts() -> None:
@@ -68,3 +68,14 @@ def test_review_input_requires_a_known_decision_and_nonblank_reason() -> None:
         ReviewInput(decision="UNKNOWN", reason="Not a valid review decision.")
     with raises(ValidationError):
         ReviewInput(decision=ReviewDecision.REJECT, reason=" ")
+
+
+def test_export_input_requires_a_known_format_and_scope() -> None:
+    export = ExportInput(format="csv", scope="qualified")
+
+    assert export.format == "csv"
+    assert export.scope == "qualified"
+    with raises(ValidationError):
+        ExportInput(format="xlsx")
+    with raises(ValidationError):
+        ExportInput(format="json", scope="rejected")

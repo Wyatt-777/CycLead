@@ -14,8 +14,9 @@ from app import __version__
 from app.config import get_settings
 from app.db import create_db_engine, create_session_factory, session_scope
 from app.models import DiscoveryRunStatus, Lead
-from app.schemas import ReviewInput, SeedInput
+from app.schemas import ExportInput, ReviewInput, SeedInput
 from app.services.discovery import DiscoveryService
+from app.services.export_service import LeadExportService
 from app.services.review_service import (
     LeadNotEligibleForReviewError,
     LeadNotFoundError,
@@ -68,6 +69,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--database-url",
         help="override the local SQLite URL for this command only",
     )
+
+    export_parser = subparsers.add_parser(
+        "export", help="export accepted, qualified, or all leads as CSV or JSON"
+    )
+    export_parser.add_argument("--format", choices=["csv", "json"], required=True)
+    export_parser.add_argument("--output", required=True, type=Path)
+    export_parser.add_argument(
+        "--scope",
+        choices=["accepted", "qualified", "all"],
+        default="accepted",
+        help="lead scope; defaults to human-accepted leads",
+    )
+    export_parser.add_argument(
+        "--database-url",
+        help="override the local SQLite URL for this command only",
+    )
     return parser
 
 
@@ -83,6 +100,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return list_review_queue(arguments)
     if arguments.command == "review":
         return record_review(arguments)
+    if arguments.command == "export":
+        return export_leads(arguments)
     return 0
 
 
@@ -171,6 +190,49 @@ def record_review(arguments: argparse.Namespace) -> int:
     except SQLAlchemyError as error:
         print(
             f"Database error: {error}. Run 'alembic upgrade head' before reviewing leads.",
+            file=sys.stderr,
+        )
+        return 1
+    finally:
+        engine.dispose()
+
+
+def export_leads(arguments: argparse.Namespace) -> int:
+    """Validate and export the requested lead scope without changing any lead data."""
+
+    try:
+        export_input = ExportInput(format=arguments.format, scope=arguments.scope)
+    except ValidationError as error:
+        print(f"Invalid export input: {error}", file=sys.stderr)
+        return 2
+
+    settings = get_settings()
+    database_url = arguments.database_url or settings.database_url
+    engine = create_db_engine(database_url)
+    try:
+        session_factory = create_session_factory(engine)
+        with session_scope(session_factory) as session:
+            result = LeadExportService(settings.qualification_threshold).export(
+                session, export_input, arguments.output
+            )
+        print(
+            json.dumps(
+                {
+                    "format": result.format,
+                    "scope": result.scope,
+                    "output": str(result.output_path),
+                    "exported": result.exported_count,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    except (OSError, ValueError) as error:
+        print(f"Export error for {arguments.output}: {error}", file=sys.stderr)
+        return 1
+    except SQLAlchemyError as error:
+        print(
+            f"Database error: {error}. Run 'alembic upgrade head' before exporting leads.",
             file=sys.stderr,
         )
         return 1

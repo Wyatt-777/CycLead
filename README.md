@@ -61,7 +61,7 @@ cyclelead --version
 uvicorn app.main:app --reload
 ```
 
-人工种子发现、解析、去重、分类、评分、资格筛选和人工审核已可用；CSV/JSON 导出仍待实现。
+人工种子发现、解析、去重、分类、评分、资格筛选、人工审核与 CSV/JSON 导出已可用。
 
 ## 人工种子发现
 
@@ -97,6 +97,27 @@ uvicorn app.main:app --reload
   --decision ACCEPT `
   --reason "Confirmed workshop with purchasing potential."
 ```
+
+## 导出推荐名单
+
+默认只导出人工 `ACCEPT` 的线索，生成适合人工联系前复核的推荐名单：
+
+```powershell
+.\.venv\Scripts\python.exe -m app.cli export `
+  --format csv `
+  --output data/exports/accepted-leads.csv
+```
+
+如需审计，可显式导出当前合格线索或全部留存线索：
+
+```powershell
+.\.venv\Scripts\python.exe -m app.cli export `
+  --format json `
+  --scope qualified `
+  --output data/exports/qualified-leads.json
+```
+
+CSV 使用 UTF-8 with BOM，并始终保留表头；JSON 输出 UTF-8 数组。导出不会发送消息或改变任何线索状态。
 
 ## 推荐第一条 Codex 指令
 
